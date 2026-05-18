@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookMaker PDF</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0e0d;
+    --surface: #1a1917;
+    --surface2: #242220;
+    --surface3: #2e2b28;
+    --border: #3a3733;
+    --border2: #4a4643;
+    --text: #f0ebe4;
+    --text2: #a09890;
+    --text3: #6b6460;
+    --accent: #d4a853;
+    --accent2: #b8873a;
+    --accent-glow: rgba(212,168,83,0.15);
+    --red: #e05c5c;
+    --green: #5cad7a;
+    --radius: 10px;
+    --radius2: 6px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* LAYOUT */
+  .app {
+    display: grid;
+    grid-template-rows: 60px 1fr;
+    grid-template-columns: 1fr 320px;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* HEADER */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { color: #0f0e0d; }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+
+  .page-counter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .page-counter strong { color: var(--accent); font-weight: 600; }
+
+  /* MAIN AREA */
+  .main {
+    overflow-y: auto;
+    padding: 24px;
+    background: var(--bg);
+  }
+
+  /* DROP ZONE */
+  .drop-zone {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--surface);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .drop-zone:hover::before, .drop-zone.drag-over::before { opacity: 1; }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--surface2);
+  }
+
+  .drop-zone-icon {
+    width: 52px;
+    height: 52px;
+    background: var(--surface3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    transition: transform 0.25s;
+  }
+
+  .drop-zone:hover .drop-zone-icon { transform: scale(1.1); }
+
+  .drop-zone h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+
+  .drop-zone p { color: var(--text2); font-size: 13px; }
+
+  .drop-zone .btn-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 16px;
+    padding: 9px 20px;
+    background: var(--accent);
+    color: #0f0e0d;
+    border: none;
+    border-radius: var(--radius2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  .btn-upload:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  input[type="file"] { display: none; }
+
+  /* SECTION TITLE */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .section-title .badge {
+    padding: 2px 8px;
+    background: var(--surface3);
+    border-radius: 10px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  /* PAGE LIST */
+  .page-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .page-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: grab;
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
+  }
+
+  .page-item:active { cursor: grabbing; }
+
+  .page-item:hover {
+    border-color: var(--border2);
+    background: var(--surface2);
+    transform: translateX(2px);
+  }
+
+  .page-item.dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+  }
+
+  .page-item.drag-target {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  .page-item.is-cover {
+    border-color: rgba(212,168,83,0.4);
+    background: rgba(212,168,83,0.05);
+  }
+
+  .drag-handle {
+    color: var(--text3);
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 2px;
+    flex-shrink: 0;
+  }
+
+  .drag-handle span {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+    transition: background 0.2s;
+  }
+
+  .page-item:hover .drag-handle { color: var(--text2); }
+
+  .page-thumb {
+    width: 42px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: var(--surface3);
+    display: block;
+  }
+
+  .page-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .page-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .cover-badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 1px 6px;
+    background: var(--accent);
+    color: #0f0e0d;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .page-filename {
+    font-size: 11px;
+    color: var(--text3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .page-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .icon-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+  .icon-btn.danger:hover { background: rgba(224,92,92,0.15); color: var(--red); border-color: rgba(224,92,92,0.3); }
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .icon-btn:disabled:hover { background: var(--surface2); color: var(--text2); border-color: var(--border); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text3);
+  }
+
+  .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-size: 13px; }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-section:last-child { border-bottom: none; }
+
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+
+  /* FORM CONTROLS */
+  .form-group { margin-bottom: 14px; }
+  .form-group:last-child { margin-bottom: 0; }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .form-group input[type="text"],
+  .form-group select,
+  .form-group input[type="range"] {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+
+  .form-group input[type="text"]:focus,
+  .form-group select:focus {
+    border-color: var(--accent);
+  }
+
+  .form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a09890' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+    cursor: pointer;
+  }
+
+  .form-group select option { background: var(--surface2); }
+
+  /* TOGGLE */
+  .toggle-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .toggle-group label { font-size: 12px; color: var(--text2); font-weight: 500; margin: 0; }
+
+  .toggle {
+    width: 36px;
+    height: 20px;
+    background: var(--surface3);
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* QUALITY SLIDER */
+  input[type="range"] {
+    padding: 0 !important;
+    height: 4px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  .range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+
+  /* EXPORT BUTTON */
+  .btn-export {
+    width: 100%;
+    padding: 13px 20px;
+    background: var(--accent);
+    color: #0f0e0d;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    transition: all 0.2s;
+    letter-spacing: 0.2px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-export::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.1);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-export:hover::before { opacity: 1; }
+  .btn-export:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,168,83,0.35); }
+  .btn-export:active { transform: translateY(0); }
+  .btn-export:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-clear {
+    width: 100%;
+    padding: 9px;
+    background: transparent;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-clear:hover { color: var(--red); border-color: rgba(224,92,92,0.3); background: rgba(224,92,92,0.07); }
+
+  /* PROGRESS */
+  .progress-wrap {
+    display: none;
+    margin-top: 14px;
+  }
+
+  .progress-wrap.visible { display: block; }
+
+  .progress-bar-bg {
+    height: 4px;
+    background: var(--surface3);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .progress-text { font-size: 11px; color: var(--text2); text-align: center; }
+
+  /* PREVIEW AREA */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .preview-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .preview-card:hover { transform: translateY(-2px); border-color: var(--border2); }
+  .preview-card.is-cover { border-color: rgba(212,168,83,0.4); }
+
+  .preview-card img {
+    width: 100%;
+    aspect-ratio: 210/297;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-card-label {
+    padding: 6px 8px;
+    font-size: 10px;
+    color: var(--text2);
+    text-align: center;
+    border-top: 1px solid var(--border);
+    font-weight: 500;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 10px 20px;
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: rgba(92,173,122,0.4); color: var(--green); }
+  .toast.error { border-color: rgba(224,92,92,0.4); color: var(--red); }
+
+  /* TABS in sidebar */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface2);
+    border-radius: var(--radius2);
+    padding: 3px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 6px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text3);
+    transition: all 0.2s;
+    border: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .tab.active { background: var(--surface3); color: var(--text); }
+
+  /* MODE BADGES */
+  .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  .mode-card {
+    padding: 10px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .mode-card.active {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    color: var(--accent);
+  }
+
+  .mode-card svg { margin-bottom: 4px; display: block; margin-left: auto; margin-right: auto; }
+  .mode-card span { font-size: 11px; font-weight: 500; display: block; }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 56px 1fr auto;
+    }
+
+    .sidebar {
+      border-left: none;
+      border-top: 1px solid var(--border);
+      grid-row: 3;
+    }
+
+    .logo-text { font-size: 15px; }
+    .preview-grid { grid-template-columns: repeat(3, 1fr); padding: 14px; gap: 8px; }
+  }
+
+  @media (max-width: 480px) {
+    .main { padding: 14px; }
+    .sidebar-section { padding: 14px; }
+    .preview-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* VIEW TOGGLE */
+  .view-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--surface2);
+    border-radius: var(--radius2);
+    padding: 3px;
+    border: 1px solid var(--border);
+  }
+
+  .view-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .view-btn.active { background: var(--surface3); color: var(--text); }
+
+  /* ANIMATE IN */
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .page-item { animation: slideIn 0.25s ease; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <span class="logo-text">Book<span>Maker</span> PDF</span>
+    </div>
+    <div class="header-actions">
+      <div class="page-counter">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <strong id="pageCount">0</strong> páginas
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="viewList" title="Lista" onclick="setView('list')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+        <button class="view-btn" id="viewGrid" title="Grade" onclick="setView('grid')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main" id="mainArea">
+    <!-- DROP ZONE -->
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="drop-zone-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a09890" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </div>
+      <h3>Adicionar imagens ao livro</h3>
+      <p>Arraste imagens aqui ou clique para selecionar</p>
+      <p style="font-size:11px;color:var(--text3);margin-top:4px;">Suporte: JPG, PNG, WEBP</p>
+      <button class="btn-upload" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Selecionar imagens
+      </button>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple>
+
+    <!-- LIST VIEW -->
+    <div id="listView">
+      <div class="section-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <h2>Páginas do livro</h2>
+        <span class="badge" id="pagesBadge">0 páginas</span>
+      </div>
+      <div class="page-list" id="pageList">
+        <div class="empty-state" id="emptyState">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <p>Nenhuma imagem adicionada ainda.<br>Arraste ou selecione imagens acima.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRID VIEW -->
+    <div id="gridView" style="display:none;">
+      <div class="section-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <h2>Pré-visualização</h2>
+        <span class="badge" id="pagesBadge2">0 páginas</span>
+      </div>
+      <div class="preview-grid" id="previewGrid"></div>
+    </div>
+  </main>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Modo do livro</div>
+      <div class="mode-grid" id="modeGrid">
+        <div class="mode-card active" data-mode="book" onclick="setMode('book', this)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Livro</span>
+        </div>
+        <div class="mode-card" data-mode="school" onclick="setMode('school', this)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span>Escolar</span>
+        </div>
+        <div class="mode-card" data-mode="album" onclick="setMode('album', this)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>Álbum</span>
+        </div>
+        <div class="mode-card" data-mode="portrait" onclick="setMode('portrait', this)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+          <span>Retrato</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Configurações do PDF</div>
+
+      <div class="form-group">
+        <label>Nome do arquivo</label>
+        <input type="text" id="fileName" value="meu-livro" placeholder="nome-do-arquivo">
+      </div>
+
+      <div class="form-group">
+        <label>Qualidade da imagem</label>
+        <input type="range" id="quality" min="0.5" max="1" step="0.05" value="0.92">
+        <div class="range-labels"><span>Menor</span><span>Alta qualidade</span></div>
+      </div>
+
+      <div class="form-group">
+        <label>Margem da página</label>
+        <select id="margin">
+          <option value="0">Sem margem</option>
+          <option value="5">Pequena (5mm)</option>
+          <option value="10" selected>Média (10mm)</option>
+          <option value="15">Grande (15mm)</option>
+          <option value="20">Extra (20mm)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Cor de fundo da página</label>
+        <select id="bgColor">
+          <option value="white">Branco</option>
+          <option value="black">Preto</option>
+          <option value="#fdf6e3">Creme</option>
+          <option value="#f5f5f5">Cinza claro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Opções</div>
+
+      <div class="toggle-group">
+        <label>Primeira imagem como capa</label>
+        <div class="toggle on" id="coverToggle" onclick="this.classList.toggle('on'); renderList()"></div>
+      </div>
+
+      <div class="toggle-group">
+        <label>Numeração de páginas</label>
+        <div class="toggle" id="pageNumToggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+
+      <div class="toggle-group">
+        <label>Objeto de ajuste: conter</label>
+        <div class="toggle on" id="fitToggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:auto;">
+      <button class="btn-export" id="exportBtn" onclick="generatePDF()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar PDF
+      </button>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+        <div class="progress-text" id="progressText">Gerando PDF...</div>
+      </div>
+
+      <button class="btn-clear" onclick="clearAll()">Limpar tudo</button>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+let pages = [];
+let dragSrcIndex = null;
+let currentView = 'list';
+let currentMode = 'book';
+
+// SETTINGS
+const A4 = { w: 210, h: 297 }; // mm
+
+function getSettings() {
+  return {
+    fileName: document.getElementById('fileName').value.trim() || 'meu-livro',
+    quality: parseFloat(document.getElementById('quality').value),
+    margin: parseInt(document.getElementById('margin').value),
+    bgColor: document.getElementById('bgColor').value,
+    isCover: document.getElementById('coverToggle').classList.contains('on'),
+    pageNum: document.getElementById('pageNumToggle').classList.contains('on'),
+    fit: document.getElementById('fitToggle').classList.contains('on'),
+  };
+}
+
+// FILE INPUT
+document.getElementById('fileInput').addEventListener('change', e => {
+  handleFiles(e.target.files);
+  e.target.value = '';
+});
+
+// DRAG & DROP on dropzone
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+
+function handleFiles(fileList) {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  let added = 0;
+  Array.from(fileList).forEach(file => {
+    if (!allowed.includes(file.type)) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      pages.push({ id: Date.now() + Math.random(), src: e.target.result, name: file.name, size: file.size });
+      added++;
+      renderAll();
+    };
+    reader.readAsDataURL(file);
+  });
+  setTimeout(() => {
+    if (added > 0) showToast(`${added} imagem(ns) adicionada(s)`, 'success');
+  }, 300);
+}
+
+function renderAll() {
+  renderList();
+  renderGrid();
+  updateCounter();
+}
+
+function updateCounter() {
+  const n = pages.length;
+  document.getElementById('pageCount').textContent = n;
+  document.getElementById('pagesBadge').textContent = n + ' página' + (n !== 1 ? 's' : '');
+  document.getElementById('pagesBadge2').textContent = n + ' página' + (n !== 1 ? 's' : '');
+}
+
+function renderList() {
+  const list = document.getElementById('pageList');
+  const s = getSettings();
+  if (pages.length === 0) {
+    list.innerHTML = `<div class="empty-state" id="emptyState">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <p>Nenhuma imagem adicionada ainda.<br>Arraste ou selecione imagens acima.</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML = pages.map((p, i) => {
+    const isCover = s.isCover && i === 0;
+    const label = isCover ? 'Capa' : `Página ${i + (s.isCover ? 0 : 1)}`;
+    const shortName = p.name.length > 22 ? p.name.substring(0, 20) + '…' : p.name;
+    return `<div class="page-item ${isCover ? 'is-cover' : ''}" 
+      draggable="true" 
+      data-index="${i}"
+      ondragstart="dragStart(event, ${i})"
+      ondragover="dragOver(event)"
+      ondragleave="dragLeave(event)"
+      ondrop="drop(event, ${i})"
+      ondragend="dragEnd()">
+      <div class="drag-handle">
+        <span></span><span></span><span></span>
+      </div>
+      <img class="page-thumb" src="${p.src}" alt="Página ${i+1}" loading="lazy">
+      <div class="page-info">
+        <div class="page-label">
+          ${label}
+          ${isCover ? '<span class="cover-badge">Capa</span>' : ''}
+        </div>
+        <div class="page-filename">${shortName}</div>
+      </div>
+      <div class="page-actions">
+        <button class="icon-btn" title="Mover para cima" onclick="movePage(${i}, -1)" ${i === 0 ? 'disabled' : ''}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button class="icon-btn" title="Mover para baixo" onclick="movePage(${i}, 1)" ${i === pages.length - 1 ? 'disabled' : ''}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button class="icon-btn danger" title="Remover" onclick="removePage(${i})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderGrid() {
+  const grid = document.getElementById('previewGrid');
+  const s = getSettings();
+  if (pages.length === 0) { grid.innerHTML = ''; return; }
+  grid.innerHTML = pages.map((p, i) => {
+    const isCover = s.isCover && i === 0;
+    const label = isCover ? 'Capa' : `Página ${i + (s.isCover ? 0 : 1)}`;
+    return `<div class="preview-card ${isCover ? 'is-cover' : ''}">
+      <img src="${p.src}" alt="${label}" loading="lazy">
+      <div class="preview-card-label">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+// PAGE ACTIONS
+function movePage(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= pages.length) return;
+  [pages[idx], pages[newIdx]] = [pages[newIdx], pages[idx]];
+  renderAll();
+}
+
+function removePage(idx) {
+  pages.splice(idx, 1);
+  renderAll();
+  showToast('Página removida');
+}
+
+function clearAll() {
+  if (pages.length === 0) return;
+  pages = [];
+  renderAll();
+  showToast('Todas as páginas foram removidas');
+}
+
+// DRAG & DROP reorder
+function dragStart(e, idx) {
+  dragSrcIndex = idx;
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-target');
+}
+
+function dragLeave(e) {
+  e.currentTarget.classList.remove('drag-target');
+}
+
+function drop(e, targetIdx) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-target');
+  if (dragSrcIndex === null || dragSrcIndex === targetIdx) return;
+  const moved = pages.splice(dragSrcIndex, 1)[0];
+  pages.splice(targetIdx, 0, moved);
+  renderAll();
+}
+
+function dragEnd() {
+  dragSrcIndex = null;
+  document.querySelectorAll('.page-item').forEach(el => {
+    el.classList.remove('dragging', 'drag-target');
+  });
+}
+
+// VIEW TOGGLE
+function setView(v) {
+  currentView = v;
+  document.getElementById('listView').style.display = v === 'list' ? 'block' : 'none';
+  document.getElementById('gridView').style.display = v === 'grid' ? 'block' : 'none';
+  document.getElementById('viewList').classList.toggle('active', v === 'list');
+  document.getElementById('viewGrid').classList.toggle('active', v === 'grid');
+  if (v === 'grid') renderGrid();
+}
+
+// MODE
+function setMode(mode, el) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// PDF GENERATION
+async function generatePDF() {
+  if (pages.length === 0) { showToast('Adicione imagens primeiro', 'error'); return; }
+
+  const s = getSettings();
+  const btn = document.getElementById('exportBtn');
+  const progress = document.getElementById('progressWrap');
+  const bar = document.getElementById('progressBar');
+  const pText = document.getElementById('progressText');
+
+  btn.disabled = true;
+  progress.classList.add('visible');
+
+  try {
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+    const margin = s.margin;
+    const pageW = A4.w;
+    const pageH = A4.h;
+    const imgAreaW = pageW - margin * 2;
+    const imgAreaH = pageH - margin * 2;
+
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) pdf.addPage();
+
+      const pct = Math.round(((i + 1) / pages.length) * 100);
+      bar.style.width = pct + '%';
+      pText.textContent = `Processando página ${i + 1} de ${pages.length}…`;
+
+      // BG
+      pdf.setFillColor(s.bgColor === 'white' ? '#ffffff' : s.bgColor === 'black' ? '#000000' : s.bgColor);
+      pdf.rect(0, 0, pageW, pageH, 'F');
+
+      // Load image to get dimensions
+      await new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const naturalW = img.naturalWidth;
+          const naturalH = img.naturalHeight;
+          const aspect = naturalW / naturalH;
+
+          let drawW, drawH;
+          if (s.fit) {
+            // Contain: fit within area preserving aspect
+            if (aspect > imgAreaW / imgAreaH) {
+              drawW = imgAreaW;
+              drawH = imgAreaW / aspect;
+            } else {
+              drawH = imgAreaH;
+              drawW = imgAreaH * aspect;
+            }
+          } else {
+            // Cover: fill area
+            if (aspect > imgAreaW / imgAreaH) {
+              drawH = imgAreaH;
+              drawW = imgAreaH * aspect;
+            } else {
+              drawW = imgAreaW;
+              drawH = imgAreaW / aspect;
+            }
+          }
+
+          const x = margin + (imgAreaW - drawW) / 2;
+          const y = margin + (imgAreaH - drawH) / 2;
+
+          // Get format
+          let fmt = 'JPEG';
+          if (pages[i].src.startsWith('data:image/png')) fmt = 'PNG';
+          else if (pages[i].src.startsWith('data:image/webp')) fmt = 'WEBP';
+
+          pdf.addImage(pages[i].src, fmt, x, y, drawW, drawH, undefined, 'FAST');
+
+          // Page number
+          if (s.pageNum && !(s.isCover && i === 0)) {
+            const pageLabel = s.isCover ? i : i + 1;
+            pdf.setFontSize(8);
+            pdf.setTextColor(150);
+            pdf.text(String(pageLabel), pageW / 2, pageH - 4, { align: 'center' });
+          }
+
+          // Cover label
+          if (s.isCover && i === 0) {
+            pdf.setFontSize(7);
+            pdf.setTextColor(180);
+            pdf.text('CAPA', pageW / 2, pageH - 4, { align: 'center' });
+          }
+
+          resolve();
+        };
+        img.onerror = resolve;
+        img.src = pages[i].src;
+      });
+
+      // yield to browser
+      await new Promise(r => setTimeout(r, 10));
+    }
+
+    bar.style.width = '100%';
+    pText.textContent = 'Finalizando…';
+    await new Promise(r => setTimeout(r, 200));
+
+    pdf.save(s.fileName + '.pdf');
+    showToast(`PDF "${s.fileName}.pdf" exportado com sucesso!`, 'success');
+
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao gerar PDF. Tente novamente.', 'error');
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => {
+      progress.classList.remove('visible');
+      bar.style.width = '0%';
+    }, 1000);
+  }
+}
+
+// TOAST
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 3000);
+}
+
+// INIT
+renderAll();
+</script>
+</body>
+</html>
